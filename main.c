@@ -1,14 +1,31 @@
 #include <stdio.h>
-#include "rogueutil.h"
+#include <conio.h>
+#include <windows.h>
 
-void print_header(void) {
-    colorPrint(LIGHTCYAN, BLACK, "WATCHLIST\n");
-    colorPrint(LIGHTCYAN, BLACK, "Manage your watchlist\n");
-    printf("===============================================\n");
+void col_green(HANDLE handle) {
+    SetConsoleTextAttribute(handle, FOREGROUND_GREEN);
+}
+
+void col_red(HANDLE handle) {
+    SetConsoleTextAttribute(handle, FOREGROUND_RED);
+}
+
+void col_blue(HANDLE handle) {
+    SetConsoleTextAttribute(handle, FOREGROUND_BLUE);
+}
+
+void col_reset(HANDLE handle) {
+    SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN);
 }
 
 int main(void) {
-    cls();
-    print_header();
-    getch();
+    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    col_green(console);
+    printf("hello, world!\n");
+    col_reset(console);
+
+    _getch();
+
+    return 0;
 }
