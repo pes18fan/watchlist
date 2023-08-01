@@ -24,9 +24,9 @@
             FOREGROUND_GREEN | FOREGROUND_BLUE)
 #endif
 #ifdef __linux__
-#define RED printf("\033[1;31m")
-#define GREEN printf("\033[1;32m")
-#define RESET printf("\033[0m")
+#define RED() printf("\033[1;31m")
+#define GREEN() printf("\033[1;32m")
+#define RESET() printf("\033[0m")
 #endif
 
 typedef struct {
