@@ -121,7 +121,6 @@ Series series_new() {
     series.name[strcspn(series.name, "\n")] = 0;
 
     printf("Enter number of episodes:\n");
-    /* Currently crashing at this line on windows. Dunno why. */
     scanf("%d", &series.episodes);
     series.watched = false;
     return series;
