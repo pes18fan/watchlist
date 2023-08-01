@@ -1,7 +1,10 @@
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define bool _Bool
+#define true 1
+#define false 0
 
 /* Include windows headers if compiling on Windows. */
 #ifdef _WIN32
