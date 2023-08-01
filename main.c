@@ -101,7 +101,7 @@ void movie_add(Profile* p, Movie movie) {
         p->movie_cap = cap < 8 ? 8 : cap * 2;
 
         /* Now set the size of `movies` to the new grown capacity. */
-        p->movies = realloc(p->movies, p->movie_cap);
+        p->movies = realloc(p->movies, p->movie_cap * sizeof(Movie));
         if (p->movies == NULL) {
             perror("Out of memory for movies");
             exit(1);
@@ -152,7 +152,7 @@ void series_add(Profile* p, Series series) {
     if (p->series_cap <= p->series_count) {
         int cap = p->series_cap;
         p->series_cap = cap < 8 ? 8 : cap * 2;
-        p->series = realloc(p->series, p->series_cap);
+        p->series = realloc(p->series, p->series_cap * sizeof(Series));
         if (p->series == NULL) {
             perror("Out of memory for series");
             exit(1);
@@ -275,11 +275,12 @@ void cleanup(Profile* profile) {
 }
 
 int main(void) {
-    Profile* p = new_profile("heisenberg");
+    Profile* p = get_profile();
+    if (p == NULL) {
+        p = new_profile("heisenberg");
+    }
 
-    movie_add(p, movie_new());
-    series_add(p, series_new());
-
+    show_profile(p);
     save_profile(p);
 
     /* Call getch() only if on Windows, since its not on Linux. Probably
