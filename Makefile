@@ -1,2 +1,2 @@
 all:
-	gcc main.c -o wl
+	gcc main.c -o wl -ggdb

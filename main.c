@@ -1,40 +1,70 @@
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* Include windows headers if compiling on Windows. */
+#ifdef _WIN32
 #include <conio.h>
 #include <windows.h>
+#endif
 
-#define bool _Bool
-#define true 1
-#define false 0
+/* Maximum possible string length allowed. */
+#define MAX_LEN 100
 
-void col_green(HANDLE handle) {
-    SetConsoleTextAttribute(handle, FOREGROUND_GREEN);
-}
-
-void col_red(HANDLE handle) {
-    SetConsoleTextAttribute(handle, FOREGROUND_RED);
-}
-
-void col_blue(HANDLE handle) {
-    SetConsoleTextAttribute(handle, FOREGROUND_BLUE);
-}
-
-void col_reset(HANDLE handle) {
-    SetConsoleTextAttribute(handle, FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN);
-}
+/* Some macros to handle terminal colors more easily. Work on both Windows
+ * and Linux */
+#ifdef _WIN32
+#define RED() \
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED)
+#define GREEN() \
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN)
+#define RESET() \
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | \
+            FOREGROUND_GREEN | FOREGROUND_BLUE)
+#endif
+#ifdef __linux__
+#define RED printf("\033[1;31m")
+#define GREEN printf("\033[1;32m")
+#define RESET printf("\033[0m")
+#endif
 
 typedef struct {
-    const char* name;
+    char name[MAX_LEN];
     bool watched;
 } Movie;
 
-Movie mv_new(const char* name) {
+typedef struct {
+    char name[MAX_LEN];
+    int episodes;
+    bool watched;
+} Series;
+
+typedef struct {
+    char uname[MAX_LEN];
+
+    /* Both `movies` and `series` are malloc'd and grow their size as needed. */
+    Movie* movies;
+    int movie_count;
+    int movie_cap;
+
+    Series* series;
+    int series_count;
+    int series_cap;
+} Profile;
+
+Movie movie_new() {
     Movie movie;
-    movie.name = name;
+
+    printf("Enter name for movie:\n");
+    fgets(movie.name, MAX_LEN, stdin);
+    /* Removes the newline character that fgets() puts at the end. */
+    movie.name[strcspn(movie.name, "\n")] = 0;
     movie.watched = false;
     return movie;
 }
 
-void mv_toggle_watch(Movie* movie) {
+void movie_toggle_watch(Movie* movie) {
     if (movie->watched == false) {
         movie->watched = true;
     } else {
@@ -42,26 +72,59 @@ void mv_toggle_watch(Movie* movie) {
     }
 }
 
-void mv_print(Movie movie) {
+void movie_print(Movie movie) {
     printf("Movie name: %s\n", movie.name);
     printf("Watched: %s\n", movie.watched ? "yez" : "nope");
 }
 
-typedef struct {
-    const char* name;
-    int episodes;
-    bool watched;
-} Series;
+/* Get a movie from the movie list in a profile. */
+Movie* movie_get(Profile* p, const char* name) {
+    for (int i = 0; i < p->movie_count; i++) {
+        if (strncmp(p->movies[i].name, name, MAX_LEN)) {
+            return &p->movies[i];
+        }
+    }
 
-Series sr_new(const char* name, int episodes) {
+    return NULL;
+}
+
+/* Add a movie to the movie list in a profile. */
+void movie_add(Profile* p, Movie movie) {
+    /* This if statement checks if the capacity of the `movies` array is less
+     * than the number of elements, and if so it increases the capacity by
+     * using the realloc() function. Same thing done with series_add(). */
+    if (p->movie_cap <= p->movie_count) {
+        /* Get the current capacity of the movie array. */
+        int cap = p->movie_cap;
+
+        /* Grow the capacity as needed. */
+        p->movie_cap = cap < 8 ? 8 : cap * 2;
+
+        /* Now set the size of `movies` to the new grown capacity. */
+        p->movies = realloc(p->movies, p->movie_cap);
+        if (p->movies == NULL) {
+            perror("Out of memory for movies");
+            exit(1);
+        }
+    }
+
+    p->movies[p->movie_count++] = movie;
+}
+
+Series series_new() {
     Series series;
-    series.name = name;
-    series.episodes = episodes;
+    printf("Enter name for series:\n");
+    fgets(series.name, MAX_LEN, stdin);
+    series.name[strcspn(series.name, "\n")] = 0;
+
+    printf("Enter number of episodes:\n");
+    /* Currently crashing at this line on windows. Dunno why. */
+    scanf("%d", &series.episodes);
     series.watched = false;
     return series;
 }
 
-void sr_toggle_watch(Series* series) {
+void series_toggle_watch(Series* series) {
     if (series->watched == true) {
         series->watched = false;
     } else {
@@ -69,29 +132,162 @@ void sr_toggle_watch(Series* series) {
     }
 }
 
-void sr_print(Series series) {
+void series_print(Series series) {
     printf("Series name: %s\n", series.name);
     printf("Episodes: %d\n", series.episodes);
     printf("Watched: %s\n", series.watched ? "yez" : "nope");
 }
 
+Series* series_get(Profile* p, const char* name) {
+    for (int i = 0; i < p->series_count; i++) {
+        if (strncmp(p->series[i].name, name, MAX_LEN)) {
+            return &p->series[i];
+        }
+    }
+
+    return NULL;
+}
+
+void series_add(Profile* p, Series series) {
+    if (p->series_cap <= p->series_count) {
+        int cap = p->series_cap;
+        p->series_cap = cap < 8 ? 8 : cap * 2;
+        p->series = realloc(p->series, p->series_cap);
+        if (p->series == NULL) {
+            perror("Out of memory for series");
+            exit(1);
+        }
+    }
+
+    p->series[p->series_count++] = series;
+}
+
+Profile* new_profile(const char* uname) {
+    Profile* p = malloc(sizeof(Profile));
+    if (p == NULL) {
+        perror("Out of memory for profile");
+        exit(1);
+    }
+
+    strncpy(p->uname, uname, MAX_LEN);
+
+    /* Both `movies` and `series` start off completely empty. */
+    p->movies = NULL;
+    p->movie_count = 0;
+    p->movie_cap = 0;
+
+    p->series = NULL;
+    p->series_count = 0;
+    p->series_cap = 0;
+
+    return p;
+}
+
+/* Print out the stuff in a profile. */
+void show_profile(Profile* profile) {
+    RED();
+    printf("PROFILE:\n");
+    RESET();
+
+    printf("Name: %s\n", profile->uname);
+    
+    printf("Movies in list:\n");
+    for (int i = 0; i < profile->movie_count; i++) {
+        movie_print(profile->movies[i]);
+    }
+
+    printf("Series in list:\n");
+    for (int i = 0; i < profile->series_count; i++) {
+        series_print(profile->series[i]);
+    }
+}
+
+/* Read the profile from a file. */
+Profile* get_profile() {
+    Profile* profile = malloc(sizeof(Profile));
+    if (profile == NULL) {
+        perror("Out of memory for profile");
+        exit(1);
+    }
+    FILE* f = fopen("profile.bin", "r");
+    if (f == NULL) {
+        // Profile does not exist / failed to open.
+        return NULL;
+    }
+
+    // read basic data
+    fread(&profile->uname, sizeof(profile->uname), 1, f);
+    fread(&profile->movie_count, sizeof(profile->movie_count), 1, f);
+    fread(&profile->series_count, sizeof(profile->series_count), 1, f);
+
+    /* Bunch of mallocs */
+    profile->movies = malloc(sizeof(Movie) * profile->movie_count);
+    for (int i = 0; i < profile->movie_count; i++) {
+        fread(&profile->movies[i], sizeof(Movie), 1, f);
+    }
+
+    profile->series = malloc(sizeof(Series) * profile->series_count);
+    for (int i = 0; i < profile->series_count; i++) {
+        fread(&profile->series[i], sizeof(Series), 1, f);
+    }
+
+    fclose(f);
+    return profile;
+}
+
+/* Save the profile to a file. */
+void save_profile(Profile* profile) {
+    FILE* f = fopen("profile.bin", "w");
+    if (f == NULL) {
+        perror("Failed to save profile");
+        exit(1);
+    }
+
+    // Write basic data
+    fwrite(&profile->uname, sizeof(profile->uname), 1, f);
+    fwrite(&profile->movie_count, sizeof(profile->movie_count), 1, f);
+    fwrite(&profile->series_count, sizeof(profile->series_count), 1, f);
+
+    // write movies
+    for (int i = 0; i < profile->movie_count; i++) {
+        fwrite(&profile->movies[i], sizeof(Movie), 1, f);
+    }
+
+    // write series
+    for (int i = 0; i < profile->series_count; i++) {
+        fwrite(&profile->series[i], sizeof(Series), 1, f);
+    }
+
+    fclose(f);
+}
+
+/* Free all of the arrays allocated. Don't want memory leaks, yknow? */
+void cleanup(Profile* profile) {
+    if (profile->movies != NULL) {
+        free(profile->movies);
+        profile->movies = NULL;
+    }
+
+    if (profile->series != NULL) {
+        free(profile->series); 
+        profile->series = NULL;
+    }
+}
+
 int main(void) {
-    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+    Profile* p = new_profile("heisenberg");
 
-    Movie opp = mv_new("Oppenheimer");
+    movie_add(p, movie_new());
+    series_add(p, series_new());
 
-    col_green(console);
-    mv_print(opp); 
-    col_reset(console);
+    save_profile(p);
 
-    Series sg = sr_new("Steins;Gate", 24);
-    sr_toggle_watch(&sg);
-
-    col_blue(console);
-    sr_print(sg);
-    col_reset(console);
-
+    /* Call getch() only if on Windows, since its not on Linux. Probably
+     * won't need this for long anyways, once there's a proper main menu. */
+#ifdef _WIN32
     _getch();
+#endif
+    cleanup(p);
 
     return 0;
 }
