@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "colors.h"
 
 #define bool int
 #define true 1
@@ -14,23 +15,6 @@
 
 /* Maximum possible string length allowed. */
 #define MAX_LEN 100
-
-/* Some macros to handle terminal colors more easily. Work on both Windows
- * and Linux */
-#ifdef _WIN32
-#define RED() \
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED)
-#define GREEN() \
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN)
-#define RESET() \
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED | \
-            FOREGROUND_GREEN | FOREGROUND_BLUE)
-#endif
-#ifdef __linux__
-#define RED() printf("\033[1;31m")
-#define GREEN() printf("\033[1;32m")
-#define RESET() printf("\033[0m")
-#endif
 
 typedef struct {
     char name[MAX_LEN];
