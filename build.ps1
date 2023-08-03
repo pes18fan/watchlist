@@ -1,1 +1,1 @@
-gcc main.c -o wl.exe -ggdb
+gcc main.c term.c -o wl.exe -ggdb

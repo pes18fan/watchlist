@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "colors.h"
+#include "term.h"
 
 #define bool int
 #define true 1
@@ -47,6 +47,8 @@ Movie movie_new() {
     fgets(movie.name, MAX_LEN, stdin);
     /* Removes the newline character that fgets() puts at the end. */
     movie.name[strcspn(movie.name, "\n")] = 0;
+    fflush(stdin);
+
     movie.watched = false;
     return movie;
 }
@@ -60,8 +62,8 @@ void movie_toggle_watch(Movie* movie) {
 }
 
 void movie_print(Movie movie) {
-    printf("Movie name: %s\n", movie.name);
-    printf("Watched: %s\n", movie.watched ? "yez" : "nope");
+    printf("\tMovie name: %s\n", movie.name);
+    printf("\tWatched: %s\n", movie.watched ? "yez" : "nope");
 }
 
 /* Get a movie from the movie list in a profile. */
@@ -103,9 +105,11 @@ Series series_new() {
     printf("Enter name for series:\n");
     fgets(series.name, MAX_LEN, stdin);
     series.name[strcspn(series.name, "\n")] = 0;
+    fflush(stdin);
 
     printf("Enter number of episodes:\n");
     scanf("%d", &series.episodes);
+    fflush(stdin);
     series.watched = false;
     return series;
 }
@@ -119,9 +123,9 @@ void series_toggle_watch(Series* series) {
 }
 
 void series_print(Series series) {
-    printf("Series name: %s\n", series.name);
-    printf("Episodes: %d\n", series.episodes);
-    printf("Watched: %s\n", series.watched ? "yez" : "nope");
+    printf("\tSeries name: %s\n", series.name);
+    printf("\tEpisodes: %d\n", series.episodes);
+    printf("\tWatched: %s\n", series.watched ? "yez" : "nope");
 }
 
 Series* series_get(Profile* p, const char* name) {
@@ -176,15 +180,25 @@ void show_profile(Profile* profile) {
     RESET();
 
     printf("Name: %s\n", profile->uname);
-    
-    printf("Movies in list:\n");
-    for (int i = 0; i < profile->movie_count; i++) {
-        movie_print(profile->movies[i]);
+
+    printf("Movies in list: ");
+    if (profile->movie_count == 0) {
+        printf("none\n");
+    } else {
+        printf("\n");
+        for (int i = 0; i < profile->movie_count; i++) {
+            movie_print(profile->movies[i]);
+        }
     }
 
-    printf("Series in list:\n");
-    for (int i = 0; i < profile->series_count; i++) {
-        series_print(profile->series[i]);
+    printf("Series in list: ");
+    if (profile->series_count == 0) {
+        printf("none\n");
+    } else {
+        printf("\n");
+        for (int i = 0; i < profile->series_count; i++) {
+            series_print(profile->series[i]);
+        }
     }
 }
 
@@ -260,20 +274,65 @@ void cleanup(Profile* profile) {
     }
 }
 
+void print_header() {
+    GREEN();
+    center_text("Watchlist.\n");
+    RESET();
+    center_text("====================\n");
+}
+
+void print_menu() {
+    printf("\t[1] View your profile\n");
+    printf("\t[2] Add a movie\n");
+    printf("\t[3] Add a series\n");
+    printf("\t[4] Exit\n");
+}
+
+void open_menu(Profile* profile) {
+    print_header();
+    print_menu();
+
+    while (true) {
+        /* If a key was pressed, handle it. */
+        if (_kbhit()) {
+            int key = _getch();
+            fflush(stdin);
+            clrscr();
+            switch (key) {
+                case 49: // 1
+                    show_profile(profile);
+                    printf("Press any key to go back.\n");
+                    _getch();
+                    fflush(stdin);
+                    break;
+                case 50: // 2
+                    movie_add(profile, movie_new());
+                    break;
+                case 51: // 3
+                    series_add(profile, series_new());
+                    break;
+                case 52: // 4
+                    goto end;
+                default:
+                    fprintf(stderr, "Invalid key! Try again.\n");
+            }
+            clrscr();
+            print_header();
+            print_menu();
+        }
+    }
+end: return;
+}
+
 int main(void) {
     Profile* p = get_profile();
     if (p == NULL) {
         p = new_profile("heisenberg");
     }
 
-    show_profile(p);
+    open_menu(p);
     save_profile(p);
 
-    /* Call getch() only if on Windows, since its not on Linux. Probably
-     * won't need this for long anyways, once there's a proper main menu. */
-#ifdef _WIN32
-    _getch();
-#endif
     cleanup(p);
 
     return 0;

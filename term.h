@@ -1,5 +1,5 @@
-#ifndef wl_colors_h
-#define wl_colors_h
+#ifndef wl_term_h
+#define wl_term_h
 
 /* Some macros to handle terminal colors more easily. Work on both Windows
  * and Linux */
@@ -17,5 +17,8 @@
 #define GREEN() printf("\033[1;32m")
 #define RESET() printf("\033[0m")
 #endif
+
+void center_text(const char* text);
+void clrscr();
 
 #endif /* wl_colors_h */
