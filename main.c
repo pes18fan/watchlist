@@ -308,6 +308,11 @@ void cleanup(Profile* profile) {
     }
 }
 
+void wait_for_key() {
+    printf("Press any key to go back.\n");
+    __getch();
+}
+
 void print_header() {
     GREEN();
     center_text("Watchlist.\n");
@@ -319,9 +324,135 @@ void print_menu() {
     printf("\t[1] View your profile\n");
     printf("\t[2] Add a movie\n");
     printf("\t[3] Add a series\n");
-    printf("\t[4] Search for a movie or series\n");
+    printf("\t[4] Find and modify a movie or series\n");
     printf("\t[5] Reset the profile\n");
     printf("\t[6] Exit\n");
+}
+
+void print_movie_modification_menu() {
+    printf("\t[1] Change name\n");
+    printf("\t[2] Toggle the watched state\n");
+    printf("\t[3] Go back\n");
+}
+
+void print_series_modification_menu() {
+    printf("\t[1] Change name\n");
+    printf("\t[2] Change number of episodes\n");
+    printf("\t[3] Toggle the watched state\n");
+    printf("\t[4] Go back\n");
+}
+
+void modify_movie(Movie* movie) {
+    clrscr();
+    print_header();
+    movie_print(*movie);
+    print_movie_modification_menu();
+
+    while (true) {
+        if (__kbhit()) {
+            int key = __getch();
+
+            switch (key) {
+                case 49: { // 1
+                    clrscr();
+                    printf("Enter a new name.\n");
+                    printf("%s --> ", movie->name);
+                    fgets(movie->name, MAX_LEN, stdin);
+                    wait_for_key();
+                    fflush(stdin);
+                    break;
+                }
+                case 50: { // 2
+                    clrscr();
+                    movie_toggle_watch(movie);
+                    printf("%s is now set as ", movie->name);
+                    printf(movie->watched ? "watched\n" : "not watched\n");
+                    wait_for_key();
+                    break;
+                } 
+                case 51: goto end; // 3
+                default: {
+                    fprintf(stderr, "Invalid option. Try again!\n");
+                    wait_for_key();
+                    break;
+                }
+            }
+
+            clrscr();
+            print_header();
+            movie_print(*movie);
+            print_movie_modification_menu();
+        }
+    }
+
+end: return;
+}
+
+void modify_series(Series* series) {
+    clrscr();
+    print_header();
+    series_print(*series);
+    print_series_modification_menu();
+
+    while (true) {
+        if (__kbhit()) {
+            int key = __getch();
+
+            switch (key) {
+                case 49: { // 1: Change the name
+                    clrscr();
+                    printf("Enter a new name.\n");
+                    printf("%s --> ", series->name);
+                    fgets(series->name, MAX_LEN, stdin);
+                    printf("Name changed.\n");
+                    wait_for_key();
+                    fflush(stdin);
+                    break;
+                }
+                case 50: { // 2: Change the number of episodes
+                    clrscr();
+                    printf("Enter the new number of episodes.\n");
+                    printf("%d --> ", series->episodes);
+
+                    char buf[MAX_LEN];
+                    int value;
+retry:
+                    fgets(buf, MAX_LEN, stdin);
+                    if (sscanf(buf, "%d", &value) != 1) {
+                        fprintf(stderr, "Please enter a number!\n");
+                        goto retry;
+                    }
+                    series->episodes = value;
+
+                    printf("Number of episodes changed.\n");
+                    wait_for_key();
+                    fflush(stdin);
+                    break;
+                } 
+                case 51: { // 3: Toggle the watched state
+                    clrscr();
+                    series_toggle_watch(series);
+                    printf("%s is now set as ", series->name);
+                    printf(series->watched ? "watched\n" : "not watched\n");
+                    wait_for_key();
+                    break;
+                }
+                case 52: goto end; // 4: Go back
+                default: {
+                    fprintf(stderr, "Invalid option. Try again!\n");
+                    wait_for_key();
+                    break;
+                }
+            }
+
+            clrscr();
+            print_header();
+            series_print(*series);
+            print_series_modification_menu();
+        }
+    }
+
+end: return;
 }
 
 void open_menu(Profile* profile) {
@@ -338,24 +469,21 @@ void open_menu(Profile* profile) {
                 /* Checking the ASCII values. */
                 case 49: { // 1
                     show_profile(profile);
-                    printf("Press any key to go back.\n");
-                    __getch();
+                    wait_for_key();
                     fflush(stdin);
                     break;
                 }
                 case 50: { // 2
                     movie_add(profile, movie_new());
                     printf("Movie added.\n");
-                    printf("Press any key to go back.\n");
-                    __getch();
+                    wait_for_key();
                     fflush(stdin);
                     break;
                 }
                 case 51: { // 3
                     series_add(profile, series_new());
                     printf("Series added.\n");
-                    printf("Press any key to go back.\n");
-                    __getch();
+                    wait_for_key();
                     fflush(stdin);
                     break; 
                 }
@@ -368,29 +496,27 @@ void open_menu(Profile* profile) {
                     Movie* found_movie = movie_get(profile, query);
                     if (found_movie != NULL) {
                         printf("Found a movie with the provided name:\n");
-                        movie_print(*found_movie);
+                        modify_movie(found_movie);
                         goto search_done;
                     }
 
                     Series* found_series = series_get(profile, query);
                     if (found_series != NULL) {
                         printf("Found a series with the provided name:\n");
-                        series_print(*found_series);
+                        modify_series(found_series);
                         goto search_done;
                     }
 
                     fprintf(stderr, "Nothing found with that name.\n");
+                    wait_for_key();
 search_done:
-                    printf("Press any key to go back.\n");
-                    __getch();
                     fflush(stdin);
                     break;
                 }
                 case 53: { // 5
                     reset_profile(profile);
                     printf("Profile has been reset.\n");
-                    printf("Press any key to go back.\n");
-                    __getch();
+                    wait_for_key();
                     fflush(stdin);
                     break;
                 }
@@ -398,8 +524,7 @@ search_done:
                     goto end;
                 default: {
                     fprintf(stderr, "Invalid key! Try again.\n");
-                    printf("Press any key to go back.\n");
-                    __getch();
+                    wait_for_key();
                     fflush(stdin);
                     break;
                 }
