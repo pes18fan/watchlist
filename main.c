@@ -69,7 +69,7 @@ void movie_print(Movie movie) {
 /* Get a movie from the movie list in a profile. */
 Movie* movie_get(Profile* p, const char* name) {
     for (int i = 0; i < p->movie_count; i++) {
-        if (strncmp(p->movies[i].name, name, MAX_LEN)) {
+        if (strcmp(p->movies[i].name, name) == 0) {
             return &p->movies[i];
         }
     }
@@ -102,15 +102,25 @@ void movie_add(Profile* p, Movie movie) {
 
 Series series_new() {
     Series series;
+
     printf("Enter name for series:\n");
     fgets(series.name, MAX_LEN, stdin);
     series.name[strcspn(series.name, "\n")] = 0;
     fflush(stdin);
 
+    char buf[MAX_LEN];
+    int value;
     printf("Enter number of episodes:\n");
-    /* Program crashes frequently, often here. Magically stops crashing when
-     * I run it in the debugger. */
-    scanf("%d", &series.episodes);
+
+retry:
+    fgets(buf, MAX_LEN, stdin);
+    if (sscanf(buf, "%d", &value) != 1) {
+        fprintf(stderr, "Please enter a number!\n");
+        goto retry;
+    } else {
+        series.episodes = value;
+    }
+
     fflush(stdin);
     series.watched = false;
     return series;
@@ -132,7 +142,7 @@ void series_print(Series series) {
 
 Series* series_get(Profile* p, const char* name) {
     for (int i = 0; i < p->series_count; i++) {
-        if (strncmp(p->series[i].name, name, MAX_LEN)) {
+        if (strcmp(p->series[i].name, name) == 0) {
             return &p->series[i];
         }
     }
@@ -240,13 +250,17 @@ Profile* get_profile() {
     fread(&profile->movie_count, sizeof(profile->movie_count), 1, f);
     fread(&profile->series_count, sizeof(profile->series_count), 1, f);
 
+    /* Set the capacity for the movie and series arrays to some safe number. */
+    profile->movie_cap = profile->movie_count * 2;
+    profile->series_cap = profile->series_count * 2;
+
     /* Bunch of mallocs */
-    profile->movies = malloc(sizeof(Movie) * profile->movie_count);
+    profile->movies = malloc(sizeof(Movie) * profile->movie_cap);
     for (int i = 0; i < profile->movie_count; i++) {
         fread(&profile->movies[i], sizeof(Movie), 1, f);
     }
 
-    profile->series = malloc(sizeof(Series) * profile->series_count);
+    profile->series = malloc(sizeof(Series) * profile->series_cap);
     for (int i = 0; i < profile->series_count; i++) {
         fread(&profile->series[i], sizeof(Series), 1, f);
     }
@@ -305,8 +319,9 @@ void print_menu() {
     printf("\t[1] View your profile\n");
     printf("\t[2] Add a movie\n");
     printf("\t[3] Add a series\n");
-    printf("\t[4] Reset the profile\n");
-    printf("\t[5] Exit\n");
+    printf("\t[4] Search for a movie or series\n");
+    printf("\t[5] Reset the profile\n");
+    printf("\t[6] Exit\n");
 }
 
 void open_menu(Profile* profile) {
@@ -321,37 +336,73 @@ void open_menu(Profile* profile) {
             clrscr();
             switch (key) {
                 /* Checking the ASCII values. */
-                case 49: // 1
+                case 49: { // 1
                     show_profile(profile);
                     printf("Press any key to go back.\n");
                     __getch();
                     fflush(stdin);
                     break;
-                case 50: // 2
+                }
+                case 50: { // 2
                     movie_add(profile, movie_new());
                     printf("Movie added.\n");
                     printf("Press any key to go back.\n");
                     __getch();
                     fflush(stdin);
                     break;
-                case 51: // 3
+                }
+                case 51: { // 3
                     series_add(profile, series_new());
                     printf("Series added.\n");
                     printf("Press any key to go back.\n");
                     __getch();
                     fflush(stdin);
+                    break; 
+                }
+                case 52: { // 4
+                    char query[MAX_LEN];
+                    printf("Enter the movie or series to look for:\n");
+                    fgets(query, MAX_LEN, stdin);
+                    query[strcspn(query, "\n")] = 0;
+                    
+                    Movie* found_movie = movie_get(profile, query);
+                    if (found_movie != NULL) {
+                        printf("Found a movie with the provided name:\n");
+                        movie_print(*found_movie);
+                        goto search_done;
+                    }
+
+                    Series* found_series = series_get(profile, query);
+                    if (found_series != NULL) {
+                        printf("Found a series with the provided name:\n");
+                        series_print(*found_series);
+                        goto search_done;
+                    }
+
+                    fprintf(stderr, "Nothing found with that name.\n");
+search_done:
+                    printf("Press any key to go back.\n");
+                    __getch();
+                    fflush(stdin);
                     break;
-                case 52: // 4
+                }
+                case 53: { // 5
                     reset_profile(profile);
                     printf("Profile has been reset.\n");
                     printf("Press any key to go back.\n");
                     __getch();
                     fflush(stdin);
                     break;
-                case 53: // 5
+                }
+                case 54: // 6
                     goto end;
-                default:
+                default: {
                     fprintf(stderr, "Invalid key! Try again.\n");
+                    printf("Press any key to go back.\n");
+                    __getch();
+                    fflush(stdin);
+                    break;
+                }
             }
             clrscr();
             print_header();
