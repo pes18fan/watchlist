@@ -315,8 +315,8 @@ void open_menu(Profile* profile) {
 
     while (true) {
         /* If a key was pressed, handle it. */
-        if (_kbhit()) {
-            int key = _getch();
+        if (__kbhit()) {
+            int key = __getch();
             fflush(stdin);
             clrscr();
             switch (key) {
@@ -324,28 +324,28 @@ void open_menu(Profile* profile) {
                 case 49: // 1
                     show_profile(profile);
                     printf("Press any key to go back.\n");
-                    _getch();
+                    __getch();
                     fflush(stdin);
                     break;
                 case 50: // 2
                     movie_add(profile, movie_new());
                     printf("Movie added.\n");
                     printf("Press any key to go back.\n");
-                    _getch();
+                    __getch();
                     fflush(stdin);
                     break;
                 case 51: // 3
                     series_add(profile, series_new());
                     printf("Series added.\n");
                     printf("Press any key to go back.\n");
-                    _getch();
+                    __getch();
                     fflush(stdin);
                     break;
                 case 52: // 4
                     reset_profile(profile);
                     printf("Profile has been reset.\n");
                     printf("Press any key to go back.\n");
-                    _getch();
+                    __getch();
                     fflush(stdin);
                     break;
                 case 53: // 5

@@ -20,5 +20,7 @@
 
 void center_text(const char* text);
 void clrscr();
+int __getch();
+int __kbhit();
 
 #endif /* wl_colors_h */

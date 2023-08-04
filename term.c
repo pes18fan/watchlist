@@ -1,10 +1,13 @@
 #include <stdio.h>
+#include <string.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <conio.h>
 #else
 #include <sys/ioctl.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <termios.h>
 #endif
@@ -46,6 +49,28 @@ int __kbhit() {
 #ifdef _WIN32
     return _kbhit();
 #else
+    int cnt = 0;
+    int error;
+    static struct termios Otty, Ntty;
+
+    tcgetattr(0, &Otty);
+    Ntty = Otty;
+    Ntty.c_iflag = 0;
+    Ntty.c_oflag = 0;
+    Ntty.c_lflag &= ~ICANON;
+    Ntty.c_cc[VMIN] = 1;
+    Ntty.c_cc[VTIME] = 1;
+
+    if (0 == (error = tcsetattr(0, TCSANOW, &Ntty))) {
+        struct timeval tv;
+        error += ioctl(0, FIONREAD, &cnt);
+        error += tcsetattr(0, TCSANOW, &Otty);
+        tv.tv_sec = 0;
+        tv.tv_usec = 100;
+        select(1, NULL, NULL, NULL, &tv);
+    }
+
+    return (error == 0 ? cnt : -1);
 #endif
 }
 
@@ -53,6 +78,26 @@ int __getch() {
 #ifdef _WIN32
     return _getch();
 #else
+    char ch;
+    int error;
+    static struct termios Otty, Ntty;
+
+    fflush(stdout);
+    tcgetattr(0, &Otty);
+    Ntty = Otty;
+    Ntty.c_iflag = 0;
+    Ntty.c_oflag = 0;
+    Ntty.c_lflag &= ~ICANON;
+    Ntty.c_lflag &= ~ECHO;
+    Ntty.c_cc[VMIN] = 1;
+    Ntty.c_cc[VTIME] = 1;
+
+    if (0 == (error = tcsetattr(0, TCSANOW, &Ntty))) {
+        error = read(0, &ch, 1);
+        error += tcsetattr(0, TCSANOW, &Otty);
+    }
+
+    return (error == 1 ? (int)ch : -1);
 #endif
 }
 
@@ -68,7 +113,7 @@ void center_text(const char* text) {
 #ifdef _WIN32
     int console_width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
 #else
-    int console_width = w.ws_col
+    int console_width = w.ws_col;
 #endif
 
     int text_length = strlen(text);
