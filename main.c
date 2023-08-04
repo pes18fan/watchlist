@@ -108,6 +108,8 @@ Series series_new() {
     fflush(stdin);
 
     printf("Enter number of episodes:\n");
+    /* Program crashes frequently, often here. Magically stops crashing when
+     * I run it in the debugger. */
     scanf("%d", &series.episodes);
     fflush(stdin);
     series.watched = false;
@@ -202,6 +204,22 @@ void show_profile(Profile* profile) {
     }
 }
 
+void reset_profile(Profile* profile) {
+    if (profile->movies != NULL) {
+        free(profile->movies);
+        profile->movies = NULL;
+        profile->movie_cap = 0;
+        profile->movie_count = 0;
+    }
+
+    if (profile->series != NULL) {
+        free(profile->series);
+        profile->series = NULL;
+        profile->series_cap = 0;
+        profile->series_count = 0;
+    }
+}
+
 /* Read the profile from a file. */
 Profile* get_profile() {
     Profile* profile = malloc(sizeof(Profile));
@@ -215,7 +233,9 @@ Profile* get_profile() {
         return NULL;
     }
 
-    // read basic data
+    /* Read basic data like the username, number of movies and number of series.
+     * We'll need the two numbers while malloc-ing to allocate exactly the
+     * right amount of memory. */
     fread(&profile->uname, sizeof(profile->uname), 1, f);
     fread(&profile->movie_count, sizeof(profile->movie_count), 1, f);
     fread(&profile->series_count, sizeof(profile->series_count), 1, f);
@@ -285,7 +305,8 @@ void print_menu() {
     printf("\t[1] View your profile\n");
     printf("\t[2] Add a movie\n");
     printf("\t[3] Add a series\n");
-    printf("\t[4] Exit\n");
+    printf("\t[4] Reset the profile\n");
+    printf("\t[5] Exit\n");
 }
 
 void open_menu(Profile* profile) {
@@ -299,6 +320,7 @@ void open_menu(Profile* profile) {
             fflush(stdin);
             clrscr();
             switch (key) {
+                /* Checking the ASCII values. */
                 case 49: // 1
                     show_profile(profile);
                     printf("Press any key to go back.\n");
@@ -307,11 +329,26 @@ void open_menu(Profile* profile) {
                     break;
                 case 50: // 2
                     movie_add(profile, movie_new());
+                    printf("Movie added.\n");
+                    printf("Press any key to go back.\n");
+                    _getch();
+                    fflush(stdin);
                     break;
                 case 51: // 3
                     series_add(profile, series_new());
+                    printf("Series added.\n");
+                    printf("Press any key to go back.\n");
+                    _getch();
+                    fflush(stdin);
                     break;
                 case 52: // 4
+                    reset_profile(profile);
+                    printf("Profile has been reset.\n");
+                    printf("Press any key to go back.\n");
+                    _getch();
+                    fflush(stdin);
+                    break;
+                case 53: // 5
                     goto end;
                 default:
                     fprintf(stderr, "Invalid key! Try again.\n");
