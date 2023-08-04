@@ -2,8 +2,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <conio.h>
 #else
 #include <sys/ioctl.h>
+#include <unistd.h>
+#include <termios.h>
 #endif
 
 #include "term.h"
@@ -37,6 +40,20 @@ void clrscr() {
 #else
     printf("\033[2J\033[H");
 #endif /* _WIN32 */
+}
+
+int __kbhit() {
+#ifdef _WIN32
+    return _kbhit();
+#else
+#endif
+}
+
+int __getch() {
+#ifdef _WIN32
+    return _getch();
+#else
+#endif
 }
 
 void center_text(const char* text) {
