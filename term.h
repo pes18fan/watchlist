@@ -23,4 +23,4 @@ void clrscr();
 int __getch();
 int __kbhit();
 
-#endif /* wl_colors_h */
+#endif /* wl_term_h */
