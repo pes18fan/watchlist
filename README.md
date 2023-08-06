@@ -26,7 +26,7 @@ yourself:
 
 ```bash
 # for MSVC:
-cl main.c term.c /Fe wl.exe
+cl main.c term.c
 
 # for gcc or clang:
 gcc main.c term.c -o wl.exe
