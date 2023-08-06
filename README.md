@@ -6,8 +6,10 @@ In development.
 
 ## building
 
-Make sure you have `gcc` installed. MSVC or `clang` should also work,
-but the code was written with `gcc` in mind, so there are no guarantees.
+Prerequesites:
+
+- A C compiler (preferably `gcc`, but MSVC and `clang` will also work)
+- `make` (not compulsory but useful)
 
 Clone the repository, move to it and simply run `make`:
 
@@ -19,7 +21,13 @@ make
 
 This will produce a `wl.exe` in the repo folder.
 
-If you don't have `make` installed, you can also run the provided PowerShell 
-build script which does the same thing, or you can compile it yourself, if you're
-using another compiler, for example. (make sure to compile both `main.c` and
-`term.c`).
+If you don't have `make` installed, you can compile `main.c` and `term.c`
+yourself:
+
+```bash
+# for MSVC:
+cl main.c term.c /Fe wl.exe
+
+# for gcc or clang:
+gcc main.c term.c -o wl.exe
+```
