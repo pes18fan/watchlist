@@ -16,15 +16,63 @@
 /* Maximum possible string length allowed. */
 #define MAX_LEN 100
 
+typedef enum {
+    Watched = 1,
+    PlanToWatch = 2,
+    Watching = 3,
+    Dropped = 4,
+    Unwatched = 5
+} WatchState;
+
+WatchState get_state() {
+    printf("Change state to:\n");
+    printf("\t1. Watched\n");
+    printf("\t2. Plan to watch\n");
+    printf("\t3. Watching\n");
+    printf("\t4. Dropped\n");
+    printf("\t5. Unwatched\n");
+
+    int value;
+retry:
+    if (scanf("%d", &value) != 1) {
+        fprintf(stderr, "Please enter a number!\n");
+        fflush(stdin);
+        goto retry;
+    }
+    if (value < 1 || value > 5) {
+        fprintf(stderr, "Enter a valid state!\n");
+        goto retry;
+    }
+
+    return (WatchState)value;
+}
+
+const char* watch_state_to_string(WatchState state) {
+    switch (state) {
+        case Watched:
+            return "Watched";
+        case PlanToWatch:
+            return "Plan to watch";
+        case Watching:
+            return "Watching";
+        case Dropped:
+            return "Dropped";
+        case Unwatched:
+            return "Unwatched";
+        default:
+            return "Unknown";
+    }
+}
+
 typedef struct {
     char name[MAX_LEN];
-    bool watched;
+    WatchState state;
 } Movie;
 
 typedef struct {
     char name[MAX_LEN];
     int episodes;
-    bool watched;
+    WatchState state;
 } Series;
 
 typedef struct {
@@ -49,21 +97,13 @@ Movie movie_new() {
     movie.name[strcspn(movie.name, "\n")] = 0;
     fflush(stdin);
 
-    movie.watched = false;
+    movie.state = Unwatched;
     return movie;
-}
-
-void movie_toggle_watch(Movie* movie) {
-    if (movie->watched == false) {
-        movie->watched = true;
-    } else {
-        movie->watched = false;
-    }
 }
 
 void movie_print(Movie movie) {
     printf("\tMovie name: %s\n", movie.name);
-    printf("\tWatched: %s\n", movie.watched ? "yez" : "nope");
+    printf("\tState: %s\n", watch_state_to_string(movie.state));
 }
 
 /* Get a movie from the movie list in a profile. */
@@ -134,6 +174,7 @@ Series series_new() {
 
 retry:
     fgets(buf, MAX_LEN, stdin);
+    fflush(stdin);
     if (sscanf(buf, "%d", &value) != 1) {
         fprintf(stderr, "Please enter a number!\n");
         goto retry;
@@ -141,23 +182,14 @@ retry:
         series.episodes = value;
     }
 
-    fflush(stdin);
-    series.watched = false;
+    series.state = Unwatched;
     return series;
-}
-
-void series_toggle_watch(Series* series) {
-    if (series->watched == true) {
-        series->watched = false;
-    } else {
-        series->watched = true;
-    }
 }
 
 void series_print(Series series) {
     printf("\tSeries name: %s\n", series.name);
     printf("\tEpisodes: %d\n", series.episodes);
-    printf("\tWatched: %s\n", series.watched ? "yez" : "nope");
+    printf("\tState: %s\n", watch_state_to_string(series.state));
 }
 
 Series* series_get(Profile* p, const char* name) {
@@ -200,14 +232,28 @@ void series_add(Profile* p, Series series) {
     p->series[p->series_count++] = series;
 }
 
-Profile* new_profile(const char* uname) {
+void wait_for_key() {
+    printf("Press any key to go back.\n");
+    __getch();
+}
+
+Profile* new_profile() {
+    clrscr();
     Profile* p = malloc(sizeof(Profile));
     if (p == NULL) {
         perror("Out of memory for profile");
         exit(1);
     }
 
-    strncpy(p->uname, uname, MAX_LEN);
+    GREEN();
+    center_text("New Profile.\n\n");
+    RESET();
+
+    printf("Enter a username to use for the profile.\n");
+    fgets(p->uname, MAX_LEN, stdin);
+    p->uname[strcspn(p->uname, "\n")] = 0;
+
+    fflush(stdin);
 
     /* Both `movies` and `series` start off completely empty. */
     p->movies = NULL;
@@ -218,6 +264,8 @@ Profile* new_profile(const char* uname) {
     p->series_count = 0;
     p->series_cap = 0;
 
+    printf("Profile created.\n");
+    wait_for_key();
     return p;
 }
 
@@ -344,11 +392,6 @@ void cleanup(Profile* profile) {
     }
 }
 
-void wait_for_key() {
-    printf("Press any key to go back.\n");
-    __getch();
-}
-
 void print_header() {
     GREEN();
     center_text("Watchlist.\n");
@@ -367,7 +410,7 @@ void print_menu() {
 
 void print_movie_modification_menu() {
     printf("\t[1] Change name\n");
-    printf("\t[2] Toggle the watched state\n");
+    printf("\t[2] Change the watched state\n");
     printf("\t[3] Remove movie from the list\n");
     printf("\t[4] Go back\n");
 }
@@ -375,7 +418,7 @@ void print_movie_modification_menu() {
 void print_series_modification_menu() {
     printf("\t[1] Change name\n");
     printf("\t[2] Change number of episodes\n");
-    printf("\t[3] Toggle the watched state\n");
+    printf("\t[3] Change the watched state\n");
     printf("\t[4] Remove series from the list\n");
     printf("\t[5] Go back\n");
 }
@@ -395,16 +438,20 @@ void modify_movie(Profile* profile, Movie* movie) {
                     clrscr();
                     printf("Enter a new name.\n");
                     printf("%s --> ", movie->name);
+
                     fgets(movie->name, MAX_LEN, stdin);
+                    movie->name[strcspn(movie->name, "\n")] = 0;
+
+                    printf("Name changed.\n");
                     wait_for_key();
                     fflush(stdin);
                     break;
                 }
                 case 50: { // 2
                     clrscr();
-                    movie_toggle_watch(movie);
-                    printf("%s is now set as ", movie->name);
-                    printf(movie->watched ? "watched\n" : "not watched\n");
+                    movie->state = get_state();
+                    printf("%s is now set as %s.\n",
+                            movie->name, watch_state_to_string(movie->state));
                     wait_for_key();
                     break;
                 } 
@@ -448,7 +495,10 @@ void modify_series(Profile* profile, Series* series) {
                     clrscr();
                     printf("Enter a new name.\n");
                     printf("%s --> ", series->name);
+
                     fgets(series->name, MAX_LEN, stdin);
+                    series->name[strcspn(series->name, "\n")] = 0;
+
                     printf("Name changed.\n");
                     wait_for_key();
                     fflush(stdin);
@@ -476,9 +526,9 @@ retry:
                 } 
                 case 51: { // 3: Toggle the watched state
                     clrscr();
-                    series_toggle_watch(series);
-                    printf("%s is now set as ", series->name);
-                    printf(series->watched ? "watched\n" : "not watched\n");
+                    series->state = get_state();
+                    printf("%s is now set as %s.\n",
+                            series->name, watch_state_to_string(series->state));
                     wait_for_key();
                     break;
                 }
@@ -508,6 +558,7 @@ end: return;
 }
 
 void open_menu(Profile* profile) {
+    clrscr();
     print_header();
     print_menu();
 
@@ -592,7 +643,23 @@ end: return;
 int main(void) {
     Profile* p = get_profile();
     if (p == NULL) {
-        p = new_profile("heisenberg");
+        center_text("No profile found. Create one? (y/n)\n");
+        char choice;
+retry:
+        choice = __getch();
+
+        if (choice != 'y' && choice != 'Y' && choice != 'n' && choice != 'N') {
+            printf("Please enter y or n.\n");
+            fflush(stdin);
+            goto retry;
+        }
+
+        if (choice == 'y' || choice == 'Y') {
+            p = new_profile();
+        } else {
+            printf("Exiting..\n");
+            return 0;
+        }
     }
 
     open_menu(p);
