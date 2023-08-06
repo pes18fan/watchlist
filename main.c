@@ -36,13 +36,13 @@ WatchState get_state() {
 retry:
     if (scanf("%d", &value) != 1) {
         fprintf(stderr, "Please enter a number!\n");
-        fflush(stdin);
         goto retry;
     }
     if (value < 1 || value > 5) {
         fprintf(stderr, "Enter a valid state!\n");
         goto retry;
     }
+    fflush(stdin);
 
     return (WatchState)value;
 }
