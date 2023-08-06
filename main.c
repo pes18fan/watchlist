@@ -77,6 +77,25 @@ Movie* movie_get(Profile* p, const char* name) {
     return NULL;
 }
 
+/* This is only called when we are sure that the movie with the provided
+ * name exists, so there is no need to check if it does. The situation
+ * is similar with series_remove(). */
+void movie_remove(Profile* p, const char* name) {
+    for (int i = 0; i < p->movie_count; i++) {
+        if (strcmp(p->movies[i].name, name) == 0) {
+            for (int j = i; j < p->movie_count - 1; j++) {
+                p->movies[j] = p->movies[j + 1];
+            }
+
+            p->movie_count--;
+            return;
+        }
+    }
+
+    fprintf(stderr, "Series not found.");
+    return;
+}
+
 /* Add a movie to the movie list in a profile. */
 void movie_add(Profile* p, Movie movie) {
     /* This if statement checks if the capacity of the `movies` array is less
@@ -99,6 +118,7 @@ void movie_add(Profile* p, Movie movie) {
 
     p->movies[p->movie_count++] = movie;
 }
+
 
 Series series_new() {
     Series series;
@@ -148,6 +168,22 @@ Series* series_get(Profile* p, const char* name) {
     }
 
     return NULL;
+}
+
+void series_remove(Profile* p, const char* name) {
+    for (int i = 0; i < p->series_count; i++) {
+        if (strcmp(p->series[i].name, name) == 0) {
+            for (int j = i; j < p->series_count - 1; j++) {
+                p->series[j] = p->series[j + 1];
+            }
+
+            p->series_count--;
+            return;
+        }
+    }
+
+    fprintf(stderr, "Series not found.");
+    return;
 }
 
 void series_add(Profile* p, Series series) {
@@ -332,17 +368,19 @@ void print_menu() {
 void print_movie_modification_menu() {
     printf("\t[1] Change name\n");
     printf("\t[2] Toggle the watched state\n");
-    printf("\t[3] Go back\n");
+    printf("\t[3] Remove movie from the list\n");
+    printf("\t[4] Go back\n");
 }
 
 void print_series_modification_menu() {
     printf("\t[1] Change name\n");
     printf("\t[2] Change number of episodes\n");
     printf("\t[3] Toggle the watched state\n");
-    printf("\t[4] Go back\n");
+    printf("\t[4] Remove series from the list\n");
+    printf("\t[5] Go back\n");
 }
 
-void modify_movie(Movie* movie) {
+void modify_movie(Profile* profile, Movie* movie) {
     clrscr();
     print_header();
     movie_print(*movie);
@@ -370,7 +408,14 @@ void modify_movie(Movie* movie) {
                     wait_for_key();
                     break;
                 } 
-                case 51: goto end; // 3
+                case 51: { // 3
+                    clrscr();
+                    movie_remove(profile, movie->name);
+                    printf("%s removed.\n", movie->name);
+                    wait_for_key();
+                    goto end;
+                }
+                case 52: goto end; // 4
                 default: {
                     fprintf(stderr, "Invalid option. Try again!\n");
                     wait_for_key();
@@ -388,7 +433,7 @@ void modify_movie(Movie* movie) {
 end: return;
 }
 
-void modify_series(Series* series) {
+void modify_series(Profile* profile, Series* series) {
     clrscr();
     print_header();
     series_print(*series);
@@ -437,7 +482,14 @@ retry:
                     wait_for_key();
                     break;
                 }
-                case 52: goto end; // 4: Go back
+                case 52: { // 4: Remove series
+                    clrscr();
+                    series_remove(profile, series->name);
+                    printf("%s removed.\n", series->name);
+                    wait_for_key();
+                    goto end;
+                }
+                case 53: goto end; // 5: Go back
                 default: {
                     fprintf(stderr, "Invalid option. Try again!\n");
                     wait_for_key();
@@ -496,14 +548,14 @@ void open_menu(Profile* profile) {
                     Movie* found_movie = movie_get(profile, query);
                     if (found_movie != NULL) {
                         printf("Found a movie with the provided name:\n");
-                        modify_movie(found_movie);
+                        modify_movie(profile, found_movie);
                         goto search_done;
                     }
 
                     Series* found_series = series_get(profile, query);
                     if (found_series != NULL) {
                         printf("Found a series with the provided name:\n");
-                        modify_series(found_series);
+                        modify_series(profile, found_series);
                         goto search_done;
                     }
 
