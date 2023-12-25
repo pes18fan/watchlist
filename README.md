@@ -1,8 +1,8 @@
 # watchlist
 
-Manage your watchlist.
+Manage your watchlist of movies, anime or anything else.
 
-In development.
+A college project. Written by me and [@SuperShekhar](https://www.github.com/SuperShekhar).
 
 ## building
 
